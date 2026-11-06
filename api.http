@@ -1,0 +1,15 @@
+
+
+### 
+POST http://localhost:4000/books
+Content-Type: application/json
+
+{
+  "title": "The Great Gatsby",
+  "author": "F. Scott Fitzgerald",
+  "price": 4000,
+  "isAvailable": true
+}
+
+###
+GET http://localhost:4000/books

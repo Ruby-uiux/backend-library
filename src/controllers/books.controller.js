@@ -1,48 +1,69 @@
-import {
-  books,
-  findBookById,
-  searchByTitle,
-  addBook,
-  updateBook,
-  removeBook
-} from "../data/books.js";
+import { prisma } from "../db.js";
 
-export function list(req, res) {
+export async function list(req, res) {
   const { q } = req.query;
-  const data = q ? searchByTitle(q) : books;
-  res.json({ count: data.length, data });
+  if (q) {
+    const results = await prisma.book.findMany({
+      where: {
+        title: {
+          contains: q
+        }
+      }
+    });
+    return res.json({ count: results.length, data: results });
+  }
+
+  const books = await prisma.book.findMany();
+  res.json({ count: books.length, data: books });
 }
 
-export function getOne(req, res) {
-  const book = findBookById(Number(req.params.id));
+export async function getOne(req, res) {
+  const book = await prisma.book.findUnique({
+    where: { id: Number(req.params.id) }
+  });
   if (!book) {
     return res.status(404).json({ message: "Book not found" });
   }
   res.json(book);
 }
 
-export function create(req, res) {
+export async function create(req, res) {
   const { title, price, author, isAvailable } = req.body;
   if (!title) {
     return res.status(400).json({ message: "title is required" });
   }
 
-  const book = addBook({ title, price, author, isAvailable });
+  const book = await prisma.book.create({
+    data: { title, price, author, isAvailable }
+  });
   res.status(201).json(book);
 }
 
-export function update(req, res) {
-  const updated = updateBook(Number(req.params.id), req.body);
-  if (!updated) {
-    return res.status(404).json({ message: "Book not found" });
+export async function update(req, res) {
+  try {
+    const updated = await prisma.book.update({
+      where: { id: Number(req.params.id) },
+      data: req.body
+    });
+    res.json(updated);
+  } catch (error) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ message: "Book not found" });
+    }
+    throw error;
   }
-  res.json(updated);
 }
 
-export function remove(req, res) {
-  const removed = removeBook(Number(req.params.id));
-  if (!removed) {
-    return res.status(404).json({ message: "Book not found" });
+export async function remove(req, res) {
+  try {
+    await prisma.book.delete({
+      where: { id: Number(req.params.id) }
+    });
+    res.status(204).send();
+  } catch (error) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ message: "Book not found" });
+    }
+    throw error;
   }
-  res.status(204).send();
 }
